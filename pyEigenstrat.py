@@ -175,6 +175,17 @@ class unpacked_data(data):
         gt=gt[self._ind_include]
         return gt
 
+    def __next__(self):
+        while True:
+            line=self._geno_file.__next__()
+            self._isnp+=1
+            if self._snp_include[self._isnp-1]:
+                break
+            
+        gt=np.array(list(line[:-1]), dtype='i1')
+        gt=gt[self._ind_include]
+        return gt
+
 ###########################################################################
 # END CLASS
 
@@ -222,6 +233,23 @@ class packed_data(data):
         return geno 
 
     def next(self):
+
+        while True:
+            if self._isnp >= self._nsnp:
+                raise StopIteration()
+            record=self._geno_file.read(self._rlen)
+            self._isnp+=1
+            if self._snp_include[self._isnp-1]:
+                break
+
+        gt_bits=np.unpackbits(np.fromstring(record, dtype='uint8'))
+        gt=2*gt_bits[::2]+gt_bits[1::2]
+        gt=gt[:self._nind][self._ind_include]
+        gt[gt==3]=9                       #set missing values
+        
+        return gt
+
+    def __next__(self):
 
         while True:
             if self._isnp >= self._nsnp:
